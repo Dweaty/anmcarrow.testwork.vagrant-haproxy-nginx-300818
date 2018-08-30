@@ -1,5 +1,7 @@
 ---
 
+
+
 # Install Selinux management packages on the all targeted hosts
 - hosts: all
   gather_facts: false
@@ -21,7 +23,7 @@
   tasks:
     - name: Enable tcp/8000 in selinux
       seport:
-        ports: "{{ http_port }}"
+        ports: "8000"
         proto: tcp
         reload: yes
         state: present
@@ -37,18 +39,18 @@
         chain: INPUT
         jump: ACCEPT
         protocol: tcp
-        destination_port: "{{ http_port }}"
+        destination_port: "80"
         comment: 'Accept all nginx traffic'
 
 
-# Setup Haproxy permissions for the Nginx
+# Setup Haproxy permissions for the HAproxy
 - hosts: haproxy
   gather_facts: false
   become: true
   tasks:
-    - name: Enable tcp/8000 in selinux
+    - name: Enable tcp/80 in selinux
       seport:
-        ports: "{{ http_port }}"
+        ports: "80"
         proto: tcp
         reload: yes
         state: present
