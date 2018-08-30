@@ -86,7 +86,7 @@
               break;
             }
             location = /probe_applicant {
-              rewrite ^/probe_applicant$ #/probe_applicant;
+              rewrite ^/probe_applicant$ /applicant.html;
               break;
             }
             location = /probe_remote {
@@ -94,7 +94,7 @@
               break;
             }
             location / {
-              proxy_pass http://google.com;
+              proxy_pass http://celeraone.com;
             }
 
 # Check/create all Nginx-related directories
@@ -109,10 +109,10 @@
         src: local.html.j2
         dest: "{{ www_dir }}/local.html"
 
-    - name: Copy /probe_applicant
+    - name: Templating applicant.html
       copy:
-        src: probe_applicant
-        dest: "{{ www_dir }}/probe_applicant"
+        src: applicant.html
+        dest: "{{ www_dir }}/applicant.html"
 
 # Setup HAproxy with the Ansible Galaxy hole
 - hosts: haproxy
@@ -160,13 +160,11 @@
     - name: Check HAproxy connectivity
       uri:
         url: "{{ item }}"
+        status_code: 200,502
       with_items:
         - "http://{{ ansible_default_ipv4.address }}/probe_local"
         - "http://{{ ansible_default_ipv4.address }}/probe_applicant"
         - "http://{{ ansible_default_ipv4.address }}/probe_remote"
         - "http://{{ ansible_default_ipv4.address }}/"
       register: haproxy_checks
-      tags: test
-
-    - debug: var="haproxy_checks"
       tags: test
