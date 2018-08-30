@@ -1,0 +1,6 @@
+[submodule "roles/geerlingguy.haproxy"]
+	path = roles/geerlingguy.haproxy
+	url = https://github.com/geerlingguy/ansible-role-haproxy.git
+[submodule "roles/geerlingguy.nginx"]
+	path = roles/geerlingguy.nginx
+	url = https://github.com/geerlingguy/ansible-role-nginx.git
