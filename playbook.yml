@@ -129,7 +129,7 @@
     - role: geerlingguy.haproxy
       haproxy_frontend_name: 'testfrontend'
       haproxy_frontend_bind_address: '*'
-      haproxy_frontend_port: 80
+      haproxy_frontend_port: '80'
       haproxy_frontend_mode: 'http'
       haproxy_backend_balance_method: 'roundrobin'
       haproxy_backend_httpchk: 'GET /probe_local'
