@@ -1,0 +1,6 @@
+*.retry
+*.swp
+*.save
+*.~
+hosts.ini
+ansible.log
