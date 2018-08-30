@@ -1,7 +1,5 @@
 ---
 
-
-
 # Install Selinux management packages on the all targeted hosts
 - hosts: all
   gather_facts: false
@@ -66,7 +64,7 @@
         chain: INPUT
         jump: ACCEPT
         protocol: tcp
-        destination_port: "{{ http_port }}"
+        destination_port: "80"
         comment: 'Accept all nginx traffic'
 
 # Setup Nginx virtualhosts
