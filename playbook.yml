@@ -81,42 +81,26 @@
         state: present
         setype: http_port_t
 
-
-    - name: Setup iptables permissions for the Nginx
-      iptables:
-        chain: INPUT
-        jump: ACCEPT
-        protocol: tcp
-        destination_port: "80"
-        comment: 'Accept all nginx traffic'
-      tags: nginx
-
-    - name: Setup iptables permissions for the Nginx
-      iptables:
-        chain: INPUT
-        jump: ACCEPT
-        protocol: tcp
-        destination_port: "80"
-        comment: 'Accept all nginx traffic'
-      tags: nginx
+    - name: Setup firewalld permissions for the Nginx
+      firewalld:
+         port: "8000/tcp"
+         permanent: true
+         state: enabled
 
     - name: ensure www_dir exists
       file:
         path: "{{ www_dir }}"
         state: directory
-      tags: nginx
 
     - name: Templating local.html
       template:
         src: local.html.j2
         dest: "{{ www_dir }}/local.html"
-      tags: nginx
 
     - name: Templating applicant.html
       copy:
         src: applicant.html
         dest: "{{ www_dir }}/applicant.html"
-      tags: nginx
 
 # HAproxy Section
 
@@ -148,6 +132,12 @@
         reload: yes
         state: present
         setype: http_port_t
+
+    - name: Setup firewalld permissions for the HAproxy
+      firewalld:
+         port: "80/tcp"
+         permanent: true
+         state: enabled
 
 # Post-test section
 
