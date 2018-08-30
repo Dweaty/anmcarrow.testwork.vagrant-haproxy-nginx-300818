@@ -1,11 +1,34 @@
 ---
 
-# Install Selinux management packages on the all targeted hosts
+# Pre-test section
 - hosts: all
-  gather_facts: false
   become: true
+  gather_facts: false
+  tags: test
   tasks:
-      # required to repo manipulation
+    - name: Ping all hosts
+      ping:
+
+# Tuning sysctl.conf on the all targeted hosts
+- hosts: all
+  become: true
+  gather_facts: false
+  tags: prepare
+  tasks:
+    - name: Tuning sysctl
+      sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+      with_items:
+        - { key: net.core.somaxconn, value: 65536 }
+        - { key: net.ipv4.tcp_max_tw_buckets, value: 1440000 }
+        - { key: net.ipv4.ip_local_port_range, value: "1024 65535" }
+        - { key: net.ipv4.tcp_fin_timeout, value: 15 }
+        - { key: net.ipv4.tcp_window_scaling, value: 1 }
+        - { key: net.ipv4.tcp_max_syn_backlog, value: 3240000 }
+
+# Install Selinux management packages on the all targeted hosts
     - name: Install libselinux-python
       package:
         name: "{{ item }}"
@@ -14,65 +37,16 @@
         - policycoreutils-python
         - libselinux-python
 
-# Setup Selinux permissions for the Nginx
-- hosts: nginx
-  gather_facts: false
-  become: true
-  tasks:
-    - name: Enable tcp/8000 in selinux
-      seport:
-        ports: "8000"
-        proto: tcp
-        reload: yes
-        state: present
-        setype: http_port_t
+# Nginx setup section
 
-# Setup iptables permissions for the Nginx
-- hosts: nginx
-  gather_facts: false
-  become: true
-  tasks:
-    - name: Setup iptables permissions for the Nginx
-      iptables:
-        chain: INPUT
-        jump: ACCEPT
-        protocol: tcp
-        destination_port: "80"
-        comment: 'Accept all nginx traffic'
-
-
-# Setup Haproxy permissions for the HAproxy
-- hosts: haproxy
-  gather_facts: false
-  become: true
-  tasks:
-    - name: Enable tcp/80 in selinux
-      seport:
-        ports: "80"
-        proto: tcp
-        reload: yes
-        state: present
-        setype: http_port_t
-
-# Setup iptables permissions for the Nginx
-- hosts: nginx
-  gather_facts: false
-  become: true
-  tasks:
-    - name: Setup iptables permissions for the Nginx
-      iptables:
-        chain: INPUT
-        jump: ACCEPT
-        protocol: tcp
-        destination_port: "80"
-        comment: 'Accept all nginx traffic'
-
-# Setup Nginx virtualhosts
 - hosts: nginx
   gather_facts: true
   become: true
+  tags: nginx
+
   vars:
     www_dir: "/var/www"
+
   roles:
     - role: geerlingguy.nginx
       nginx_vhosts:
@@ -97,27 +71,60 @@
               proxy_pass http://celeraone.com;
             }
 
-# Check/create all Nginx-related directories
   tasks:
+
+    - name: Enable tcp/8000 in selinux
+      seport:
+        ports: "8000"
+        proto: tcp
+        reload: yes
+        state: present
+        setype: http_port_t
+
+
+    - name: Setup iptables permissions for the Nginx
+      iptables:
+        chain: INPUT
+        jump: ACCEPT
+        protocol: tcp
+        destination_port: "80"
+        comment: 'Accept all nginx traffic'
+      tags: nginx
+
+    - name: Setup iptables permissions for the Nginx
+      iptables:
+        chain: INPUT
+        jump: ACCEPT
+        protocol: tcp
+        destination_port: "80"
+        comment: 'Accept all nginx traffic'
+      tags: nginx
+
     - name: ensure www_dir exists
       file:
         path: "{{ www_dir }}"
         state: directory
+      tags: nginx
 
     - name: Templating local.html
       template:
         src: local.html.j2
         dest: "{{ www_dir }}/local.html"
+      tags: nginx
 
     - name: Templating applicant.html
       copy:
         src: applicant.html
         dest: "{{ www_dir }}/applicant.html"
+      tags: nginx
 
-# Setup HAproxy with the Ansible Galaxy hole
+# HAproxy Section
+
 - hosts: haproxy
-  become: true
   gather_facts: true
+  become: true
+  tags: haproxy
+
   roles:
     - role: geerlingguy.haproxy
       haproxy_frontend_name: 'testfrontend'
@@ -128,34 +135,26 @@
       haproxy_backend_httpchk: 'GET /probe_local'
       haproxy_backend_servers:
         - name: "{{ hostvars[groups['nginx'][0]].inventory_hostname }}:8000"
-          address: "{{ hostvars[groups['nginx'][0]].ansible_eth0.ipv4.address }}:8000"
+          address: "{{ hostvars[groups['nginx'][0]].ansible_default_ipv4.address }}:8000"
         - name: "{{ hostvars[groups['nginx'][1]].inventory_hostname }}:8000"
-          address: "{{ hostvars[groups['nginx'][1]].ansible_eth0.ipv4.address }}:8000"
+          address: "{{ hostvars[groups['nginx'][1]].ansible_default_ipv4.address }}:8000"
 
-# Tuning sysctl
-- hosts: all
-  become: true
-  gather_facts: false
   tasks:
-    - name: Tuning sysctl
-      sysctl:
-        name: "{{ item.key }}"
-        value: "{{ item.value }}"
+
+    - name: Enable tcp/80 in selinux
+      seport:
+        ports: "80"
+        proto: tcp
+        reload: yes
         state: present
-      with_items:
-        - { key: net.core.somaxconn, value: 65536 }
-        - { key: net.ipv4.tcp_max_tw_buckets, value: 1440000 }
-        - { key: net.ipv4.ip_local_port_range, value: "1024 65535" }
-        - { key: net.ipv4.tcp_fin_timeout, value: 15 }
-        - { key: net.ipv4.tcp_window_scaling, value: 1 }
-        - { key: net.ipv4.tcp_max_syn_backlog, value: 3240000 }
+        setype: http_port_t
 
-
-# Test section
+# Post-test section
 
 - hosts: haproxy
   become: true
   gather_facts: true
+  tags: test
   tasks:
     - name: Check HAproxy connectivity
       uri:
@@ -167,4 +166,3 @@
         - "http://{{ ansible_default_ipv4.address }}/probe_remote"
         - "http://{{ ansible_default_ipv4.address }}/"
       register: haproxy_checks
-      tags: test
