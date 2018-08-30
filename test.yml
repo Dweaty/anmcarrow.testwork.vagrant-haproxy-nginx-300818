@@ -1,4 +1,0 @@
-- hosts: all
-  gather_facts: true
-  tasks:
-    - debug: msg="{{ hostvars[groups['nginx'][0]].inventory_hostname }}"
