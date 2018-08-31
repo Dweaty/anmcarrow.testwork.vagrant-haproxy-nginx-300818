@@ -86,6 +86,7 @@
          port: "8000/tcp"
          permanent: true
          state: enabled
+      when: ansible_distribution_major_version == "6"
 
 
     - name: ensure www_dir exists
@@ -139,6 +140,7 @@
          port: "80/tcp"
          permanent: true
          state: enabled
+      when: ansible_distribution_major_version == "6"
 
 # Post-test section
 
